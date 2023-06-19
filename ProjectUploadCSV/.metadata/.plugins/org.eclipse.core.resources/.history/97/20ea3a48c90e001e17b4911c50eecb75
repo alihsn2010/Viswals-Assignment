@@ -1,0 +1,40 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="ISO-8859-1">
+	<title>Massage Que Status</title>
+</head>
+
+<body>
+
+	<div th:if="${!status}">
+		<strong>File Status:</strong>
+		<span th:text="${message}"></span>
+		<div th:if="${statusfromAPI}">
+			<strong>Response From API:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+		<div th:if="${!statusfromAPI}">
+			<strong>Response From API:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+	</div>
+
+	<div th:if="${status}">
+		<strong>File Status:</strong>
+		<span th:text="${message}"></span>
+		<div th:if="${statusfromAPI}">
+			<strong>Response From Service:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+		<div th:if="${!statusfromAPI}">
+			<strong>Response From Service:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+	</div>
+
+</body>
+
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<style> 
+.div1 {
+  width: 300px;
+  height: 100px;
+  border: 1px solid blue;
+  box-sizing: border-box;
+}
+
+.div2 {
+  width: 300px;
+  height: 100px;  
+  padding: 50px;
+  border: 1px solid red;
+  box-sizing: border-box;
+}
+</style>
+	<meta charset="ISO-8859-1">
+	<title>Massage Que Status</title>
+</head>
+
+<body>
+
+	<div th:if="${!status}">
+		<strong>File Status:</strong>
+		<span th:text="${message}"></span>
+		<div th:if="${statusfromAPI}">
+			<strong>Response From API:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+		<div th:if="${!statusfromAPI}">
+			<strong>Response From API:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+	</div>
+
+	<div th:if="${status}">
+		<strong>File Status:</strong>
+		<span th:text="${message}"></span>
+		<div th:if="${statusfromAPI}">
+			<strong>Response From Service:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+		<div th:if="${!statusfromAPI}">
+			<strong>Response From Service:</strong>
+			<span th:text="${responseFromAPI}"></span>
+		</div>
+	</div>
+
+</body>
+
+</html>

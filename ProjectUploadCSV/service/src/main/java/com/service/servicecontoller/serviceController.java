@@ -1,0 +1,79 @@
+package com.service.servicecontoller;
+
+import java.util.List;
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.json.JSONObject;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DeliverCallback;
+import com.service.model.User;
+import com.service.repository.UserRespository;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DeliverCallback;
+
+
+
+@Controller
+@RequestMapping("/services")
+public class serviceController {
+
+	private final static String QUEUE_NAME = "queue";
+//	private static JSONObject recieveUserJsonObj = null;
+
+	@Autowired
+	private UserRespository userRespository = null;
+
+	@Autowired
+	private ConnectionFactory factory = null;
+
+	@GetMapping("/pushdata")
+	@ResponseBody
+	public boolean recieveAndStore() {
+		try {
+			factory.setHost("localhost");
+			Connection connection = factory.newConnection();
+			Channel channel = connection.createChannel();
+
+			channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+			System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
+
+			// Called when ever the data published from RabbitMQ
+			// Receive Json and store in class
+			DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+				String message = new String(delivery.getBody());
+				JSONObject recieveUserJsonObj = new JSONObject(message);
+				User user = new User(recieveUserJsonObj.getInt("id"), recieveUserJsonObj.getString("first_name"),
+						recieveUserJsonObj.getString("last_name"), recieveUserJsonObj.getString("email_address"),
+						recieveUserJsonObj.getString("created_at"), recieveUserJsonObj.getString("deleted_at"),
+						recieveUserJsonObj.getString("merged_at"), recieveUserJsonObj.getInt("parent_user_id"));
+				userRespository.save(user);
+				System.out.println(" [OK] Received '" + recieveUserJsonObj + "'");
+			};
+			channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> {
+			});
+			return true;
+		} catch (Exception e) {
+			// TODO: handle exception
+			return false;
+		}
+	}
+
+	@GetMapping("/get")
+	public String getRecords(Model model) {
+		model.addAttribute("records", userRespository.findAll());
+		return "records.html";
+	}
+
+}

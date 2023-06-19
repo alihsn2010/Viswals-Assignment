@@ -1,0 +1,119 @@
+package backend.csvtoqueue.controller;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.List;
+
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.opencsv.bean.CsvToBean;
+import com.opencsv.bean.CsvToBeanBuilder;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+
+import backend.csvtoqueue.model.User;
+
+@Controller
+@RequestMapping("/service")
+public class UploadController {
+
+	private final static String QUEUE_NAME = "queue";
+	
+	@Autowired
+	private ConnectionFactory factory = null;
+	
+	@Autowired
+	private RestTemplate templateToCall = null;
+
+	@GetMapping("/")
+	public String index() {
+		return "index";
+	}
+
+	@PostMapping("/upload-csv-file")
+	public String uploadCSVFile(@RequestParam("file") MultipartFile file, Model model) {
+
+		// validate file
+		if (file.isEmpty()) {
+			model.addAttribute("message", "Please select a CSV file to upload.");
+			model.addAttribute("status", false);
+		} else {
+
+			// parse CSV file to create a list of `User` objects
+			try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+
+				// create csv bean reader
+				CsvToBean<User> csvToBean = new CsvToBeanBuilder<User>(reader).withType(User.class)
+						.withIgnoreLeadingWhiteSpace(true).build();
+
+				// convert `CsvToBean` object to list of users
+				List<User> users = csvToBean.parse();
+
+				factory.setHost("localhost");
+
+				// Covert class object to json and publish
+				int i = 1;
+				try (Connection connection = factory.newConnection(); Channel channel = connection.createChannel()) {
+					channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+					for (User user : users) {
+						JSONObject sendUserJsonObj = new JSONObject();
+						sendUserJsonObj.put("id", user.getId());
+						sendUserJsonObj.put("first_name", user.getFirstName());
+						sendUserJsonObj.put("last_name", user.getLastName());
+						sendUserJsonObj.put("email_address", user.getEmailAddress());
+						sendUserJsonObj.put("created_at", user.getCreatedAt());
+						sendUserJsonObj.put("deleted_at", user.getDeletedAt());
+						sendUserJsonObj.put("merged_at", user.getMergedAt());
+						sendUserJsonObj.put("parent_user_id", user.getParentUserId());
+						channel.basicPublish("", QUEUE_NAME, null, sendUserJsonObj.toString().getBytes());
+						System.out.println(" [OK] Sent '" + sendUserJsonObj.toString() + "'");
+//						if(i==10) {
+//							break;
+//						}
+//						++i;
+					}
+					
+				}catch (Exception e) {
+					// TODO: handle exception
+				}
+				
+				// Call the API for further process
+				boolean message = publishProcess();
+				
+				if (message) {
+					model.addAttribute("statusfromApi", true);
+					model.addAttribute("responseFromApi", "Data Inserted Successfully");
+				} else {
+					model.addAttribute("statusfromApi", false);
+					model.addAttribute("responseFromApi", "Data Not Inserted Successfully");
+				}
+				
+				model.addAttribute("message", "File Uploaded Successfully.");
+				model.addAttribute("status", true);
+
+			} catch (Exception ex) {
+				model.addAttribute("message", "An error occurred while processing the CSV file.");
+				model.addAttribute("status", false);
+			}
+		}
+
+		return "file-upload-status";
+	}
+	
+	public boolean publishProcess() {
+		String callUrl = "http://localhost:8081/accepter/accept";
+		return templateToCall.getForObject(callUrl, Boolean.class);
+	}
+
+}
