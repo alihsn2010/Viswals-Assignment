@@ -1,0 +1,11 @@
+-- SELECT id, created_at, deleted_at, email_address, first_name, last_name, 
+--        merged_at, parent_user_id
+--   FROM users;
+
+  select count(id)
+  FROM users  ;
+
+  
+delete  FROM users  ;
+
+  select * from users;
